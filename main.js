@@ -9,7 +9,6 @@ kaboom({
 });
 
 
-
 const black = rgb(0, 0, 0);
 const white = rgb(255, 255, 255);
 const gray = rgb(100, 100, 100);
@@ -18,8 +17,61 @@ const red = rgb(255, 0, 0);
 const boxColor = rgb(128, 108, 81);
 const boxColorPressed = rgb(108, 88, 61);
 
+var wordBank = [
+  "pepperoni",
+  "sausage",
+  "pizza",
+  "rye",
+  "sauce",
+  "evil",
+  "tomato",
+  "olive",
+  "pepper",
+  "cheese",
+  "crust",
+  "salad",
+  "pinball",
+  "pineapple",
+  "wizard",
+  "zebra",
+  "italy",
+  "italiano",
+  "pie",
+  "bread",
+  "calzone",
+  "cheesey",
+  "american",
+  "garlic",
+  "buffet",
+  "dinners",
+  "panini",
+  "onion",
+  "banana",
+  "pesto",
+  "flatbread",
+  "stone",
+  "brick",
+  "entree",
+  "basil",
+  "oregano",
+  "spices",
+  "manicotti",
+  "ziti",
+  "wedge",
+  "marone",
+  "meatball",
+  "yeast",
+];
+
 //How many words the user has guessed correctly
 let totalWords = 0;
+//The word the user is currently on
+let cWord = wordBank[0];
+let cLetNum = 0;
+let cWordArray = cWord.split("");
+let cLetter = cWordArray[0];
+let nextWord = wordBank[1];
+let arrayPos = 0;
 
 //sprites
 loadSprite("background", "sprites/pizzaplace.webp");
@@ -35,70 +87,7 @@ scene("game", () => {
     fixed(),
     "background",
   ]);
-  //Counts of each word bank for what words are left
-  var wordCount = [0,0,0,0];
-  //word banks
-  var threeBank = [
-    "tea",
-    "max",
-    "pep",
-    "rye",
-    "cod",
-    "pet",
-    "own",
-    "egg",
-    "pie",
-  ];
-  var fourBank = [
-    "evil",
-    "good",
-    "grub",
-    "flop",
-    "dart", 
-    "goat",
-    "food",
-    "frog",
-    "owen",
-  ];
-  var fiveBank = [
-    "apple",
-    "grape",
-    "lemon",
-    "melon",
-    "peach",
-    "berry",
-    "chair",
-    "table",
-    "pizza",
-    "chips",
-    "fries",
-    "onion",
-    "magic",
-    "zebra",
-    "sauce",
-  ];
-  var sixBank = [
-    "banana",
-    "orange",
-    "pepper",
-    "squash",
-    "tomato",
-    "carrot",
-    "garlic",
-    "potato",
-    "wizard",
-    "escape",
-    "cheese",
-  ];
-  //The word the player is currently on
-  let cWord;
-  //The string of the letter the player is currently on
-  let cLetter;
-  //The int of the letter the player is currently on
-  let cLetNum = 0;
-  //The previous word typed
-  let prevWord;
-  
+
   //creates boxes for each letter of word(string) parameter. CurrentLet takes an int of which letter (starting from 0) is the user on. wrong holds whether the player has guessed the letter wrong(null = not answered, true = incorrect).
   function letterBox(word, currentLet, wrong) {
     let boxHeight = 50;
@@ -143,56 +132,33 @@ scene("game", () => {
     }
   };
 
-  function nextWordPreview() {
-    //Displays the next word as a preview
-    
-  }
-
-  //shuffles an entered array (Fisher-Yates Algorithm)
-  function shuffleBank(bank){
-    for(let i = bank.length - 1; i > 0; i--){
-      const r = Math.floor(Math.random() * (i + 1))
-      const temp = bank[i];
-      bank[i] = bank[r];
-      bank[r] = temp;
+  function wordPreviewBox(word){
+    let boxHeight = 25;
+    let boxWidth = 20;
+    let outlineColor = boxColorPressed;
+    //Centers the boxes with the width of the game screen
+    let x = (width() / 2) - (((word.length * boxWidth) + ((word.length - 1) * (boxWidth / 2))) / 2);
+    let y = ((height() + boxWidth)/1.6);
+    //For each letter in word parameter, create a box to hold that letter
+    for (let i = 0; i < word.length; i++) {
+      // amount of space between boxes
+      let diff = (boxWidth + 7) * i;
+      add([
+        rect(boxWidth, boxHeight),
+        pos(x + diff, y),
+        color(boxColor),
+        outline(3, outlineColor),
+        anchor("topleft"),
+        "wordbox",
+      ]);
+      add([
+        text(word[i]),
+        pos((x + (boxWidth / 4)) + diff, y + (boxWidth / 4)),
+        anchor("topleft"),
+        scale(0.5),
+        "wordbox",
+      ]);
     }
-  }
-
-  //Sets the current word to a new word. If all words in the bank have been used, shuffle the bank and reset the banks word count
-  function cycleBank(bank){
-    if(totalWords > 0){
-      if(wordCount[1] < bank.length-1){wordCount[1]++;}else{
-        //When all words in bank are used, shuffle the bank and reset the word count
-        wordCount[1] = 0;
-        shuffleBank(bank);
-      }
-      cWord = bank[wordCount[1]];
-
-    }
-  }
-  
-  //selects a word
-  function pickWord(){
-    let chance = Math.floor(Math.random() *5);
-    if(chance <= 1){
-      cycleBank(fourBank);
-    }else if (chance <= 2){
-      cycleBank(fiveBank);
-    }else if (chance <= 3){
-      cycleBank(sixBank);
-    }else {
-      cycleBank(threeBank);
-    }
-  }
-
-  
-  //Repalces the current word with a new word
-  function nextWord(){
-    pickWord();
-    while(cWord == prevWord){pickWord();}
-    cLetNum = 0; //resets to the first letter
-    letterBox(cWord, cLetNum, null);
-    cLetter = cWord[cLetNum]; //sets the current letter to the first letter
   }
   
   function startTimer(seconds) {
@@ -220,37 +186,71 @@ scene("game", () => {
       }
     });
   }
+  //shuffles an entered array (Fisher-Yates Algorithm)
+  function shuffleBank(bank){
+    for(let i = bank.length - 1; i > 0; i--){
+      const r = Math.floor(Math.random() * (i + 1))
+      const temp = bank[i];
+      bank[i] = bank[r];
+      bank[r] = temp;
+    }
+  }
 
-  function startGame() {
-    //shuffles the values of the word banks
-    shuffleBank(threeBank);
-    shuffleBank(fourBank);
-    shuffleBank(fiveBank);
-    shuffleBank(sixBank);
-    nextWord();
-    startTimer(30);
+  function pickWord(){
+    if(totalWords==0){
+      shuffleBank(wordBank);
+    }
+    if(arrayPos<wordBank.length){
+      cWord = wordBank[arrayPos];
+      if(arrayPos +1 >= wordBank.length){
+        shuffleBank(wordBank)
+        arrayPos = 0;
+      }
+      nextWord = wordBank[arrayPos +1];
+      cWordArray = cWord.split("");
+      cLetter = cWordArray[cLetNum];
+    }
+    letterBox(cWord, cLetNum, null);
+    wordPreviewBox(nextWord);
   }
   
   onKeyPress(()=>{
-    //If the correct letter is pressed, turn outline green and move on to next letter
-    if (isKeyPressed(cLetter)){
+    if(isKeyPressed(cLetter)){ //if the user presses the correct letter, go to next letter
       cLetNum++;
-      cLetter = cWord[cLetNum];
+      cLetter = cWordArray[cLetNum];
       destroyAll("wordbox");
       letterBox(cWord, cLetNum, null);
+      wordPreviewBox(nextWord);
       if(cWord.length == cLetNum){
         totalWords++;
-        prevWord = cWord;
+        arrayPos++;
         destroyAll("wordbox");
-        nextWord();
+        cLetNum = 0;
+        pickWord();
       }
     }else { //If the incorrect letter is pressed, turn outline red and shake screen
       shake(30);
       letterBox(cWord, cLetNum, true);
+      wordPreviewBox(nextWord);
     }
   });
-  startGame(); // starts the game
+
+  function startGame(){
+    totalWords = 0;
+    cWord = wordBank[0];
+    cLetNum = 0;
+    cWordArray = cWord.split("");
+    cLetter = cWordArray[0];
+    nextWord = wordBank[1];
+    arrayPos = 0;
+    pickWord();
+    startTimer(11);
+  }
+  
+  startGame();
 }); //End of Game Scene
+
+
 
 //Scene after time runs out
 scene("end", ()=>{
@@ -318,11 +318,9 @@ scene("end", ()=>{
 
   //resets score and starts game when play again button is pressed
   onClick("againBtn", () => {
-    totalWords = 0;
     go("game");
   });
   onKeyPress("space", () => {
-    totalWords = 0;
     go("game");
   });
 
