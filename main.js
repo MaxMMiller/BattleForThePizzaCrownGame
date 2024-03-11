@@ -39,7 +39,7 @@ var wordBank = [
   "pie",
   "bread",
   "calzone",
-  "cheesey",
+  "cheesy",
   "american",
   "garlic",
   "buffet",
@@ -61,6 +61,11 @@ var wordBank = [
   "marone",
   "meatball",
   "yeast",
+  "event",
+  "slice",
+  "cutter",
+  "oven",
+  "furnace",
 ];
 
 //How many words the user has guessed correctly
@@ -76,8 +81,155 @@ let arrayPos = 0;
 //sprites
 loadSprite("background", "sprites/pizzaplace.webp");
 
-//Scene that holds the true gameplay
-scene("game", () => {
+//creates boxes for each letter of word(string) parameter. CurrentLet takes an int of which letter (starting from 0) is the user on. wrong holds whether the player has guessed the letter wrong(null = not answered, true = incorrect).
+function letterBox(word, currentLet, wrong) {
+  let boxHeight = 50;
+  let boxWidth = 40;
+  let outlineColor = black;
+  //Centers the boxes with the width of the tlGame screen
+  let x = (width() / 2) - (((word.length * boxWidth) + ((word.length - 1) * (boxWidth / 2))) / 2);
+  let y = (height() - boxWidth) / 2;
+  //For each letter in word parameter, create a box to hold that letter
+  for (let i = 0; i < word.length; i++) {
+    // amount of space between boxes
+    let diff = (boxWidth + 20) * i;
+    //creates a bar under the current letter
+    if (currentLet == i) {
+      add([
+        rect(boxWidth, 3),
+        color(gray),
+        pos(x + diff, y + boxHeight + 10),
+        outline(2, black),
+        "wordbox",
+      ]);
+      //changes the color of the box outline based on wrong of answer
+      if (wrong) {outlineColor = red;} else {outlineColor = black;}
+
+    }else if (currentLet>i){ //To be on a letter past 0, previous letters must be correct
+      outlineColor = green;
+    }else {outlineColor = black;} // CurrentLet < i, are later than current so default outline
+    add([
+      rect(boxWidth, boxHeight),
+      pos(x + diff, y),
+      color(gray),
+      outline(3, outlineColor),
+      anchor("topleft"),
+      "wordbox",
+    ]);
+    add([
+      text(word[i]),
+      pos((x + (boxWidth / 4)) + diff, y + (boxWidth / 4)),
+      anchor("topleft"),
+      "wordbox",
+    ]);
+  }
+};
+
+function wordPreviewBox(word){
+  let boxHeight = 25;
+  let boxWidth = 20;
+  let outlineColor = boxColorPressed;
+  //Centers the boxes with the width of the tlGame screen
+  let x = (width() / 2) - (((word.length * boxWidth) + ((word.length - 1) * (boxWidth / 2))) / 2);
+  let y = ((height() + boxWidth)/1.6);
+  //For each letter in word parameter, create a box to hold that letter
+  for (let i = 0; i < word.length; i++) {
+    // amount of space between boxes
+    let diff = (boxWidth + 7) * i;
+    add([
+      rect(boxWidth, boxHeight),
+      pos(x + diff, y),
+      color(boxColor),
+      outline(3, outlineColor),
+      anchor("topleft"),
+      "wordbox",
+    ]);
+    add([
+      text(word[i]),
+      pos((x + (boxWidth / 4)) + diff, y + (boxWidth / 4)),
+      anchor("topleft"),
+      scale(0.5),
+      "wordbox",
+    ]);
+  }
+}
+
+function startTimer(seconds) {
+  //yellow circle behind timer
+  add([
+    pos(vec2(100,95)),
+    circle(50),
+    color(rgb(250,250,0)),
+    anchor("center"),
+  ]);
+  //Timer
+  let timer = add([
+    text(seconds.toString()),
+    pos(100, 100),
+    scale(2),
+    anchor("center"),
+    color(black),
+    { seconds: seconds },
+  ]);
+  loop(1, () => {
+    timer.seconds--;
+    timer.text = timer.seconds.toString();
+    if(timer.seconds <= 0) {
+      go("end");
+    }
+  });
+}
+//shuffles an entered array (Fisher-Yates Algorithm)
+function shuffleBank(bank){
+  for(let i = bank.length - 1; i > 0; i--){
+    const r = Math.floor(Math.random() * (i + 1))
+    const temp = bank[i];
+    bank[i] = bank[r];
+    bank[r] = temp;
+  }
+}
+
+function pickWord(){
+  if(totalWords==0){
+    shuffleBank(wordBank);
+  }
+  if(arrayPos<wordBank.length){
+    cWord = wordBank[arrayPos];
+    if(arrayPos +1 >= wordBank.length){
+      shuffleBank(wordBank)
+      arrayPos = 0;
+    }
+    nextWord = wordBank[arrayPos +1];
+    cWordArray = cWord.split("");
+    cLetter = cWordArray[cLetNum];
+  }
+  letterBox(cWord, cLetNum, null);
+  wordPreviewBox(nextWord);
+}
+function checkLetter(){
+  if(isKeyPressed(cLetter)){ //if the user presses the correct letter, go to next letter
+    cLetNum++;
+    cLetter = cWordArray[cLetNum];
+    destroyAll("wordbox");
+    letterBox(cWord, cLetNum, null);
+    wordPreviewBox(nextWord);
+    if(cWord.length == cLetNum){
+      totalWords++;
+      arrayPos++;
+      destroyAll("wordbox");
+      cLetNum = 0;
+      pickWord();
+    }
+  }else { //If the incorrect letter is pressed, turn outline red and shake screen
+    shake(30);
+    letterBox(cWord, cLetNum, true);
+    wordPreviewBox(nextWord);
+  }
+}
+
+
+//Scene that holds the time limit Game
+scene("tlGame", () => {
   // The background image
   const background = add([
     sprite("background"),
@@ -88,151 +240,8 @@ scene("game", () => {
     "background",
   ]);
 
-  //creates boxes for each letter of word(string) parameter. CurrentLet takes an int of which letter (starting from 0) is the user on. wrong holds whether the player has guessed the letter wrong(null = not answered, true = incorrect).
-  function letterBox(word, currentLet, wrong) {
-    let boxHeight = 50;
-    let boxWidth = 40;
-    let outlineColor = black;
-    //Centers the boxes with the width of the game screen
-    let x = (width() / 2) - (((word.length * boxWidth) + ((word.length - 1) * (boxWidth / 2))) / 2);
-    let y = (height() - boxWidth) / 2;
-    //For each letter in word parameter, create a box to hold that letter
-    for (let i = 0; i < word.length; i++) {
-      // amount of space between boxes
-      let diff = (boxWidth + 20) * i;
-      //creates a bar under the current letter
-      if (currentLet == i) {
-        add([
-          rect(boxWidth, 3),
-          color(gray),
-          pos(x + diff, y + boxHeight + 10),
-          outline(2, black),
-          "wordbox",
-        ]);
-        //changes the color of the box outline based on wrong of answer
-        if (wrong) {outlineColor = red;} else {outlineColor = black;}
-        
-      }else if (currentLet>i){ //To be on a letter past 0, previous letters must be correct
-        outlineColor = green;
-      }else {outlineColor = black;} // CurrentLet < i, are later than current so default outline
-      add([
-        rect(boxWidth, boxHeight),
-        pos(x + diff, y),
-        color(gray),
-        outline(3, outlineColor),
-        anchor("topleft"),
-        "wordbox",
-      ]);
-      add([
-        text(word[i]),
-        pos((x + (boxWidth / 4)) + diff, y + (boxWidth / 4)),
-        anchor("topleft"),
-        "wordbox",
-      ]);
-    }
-  };
-
-  function wordPreviewBox(word){
-    let boxHeight = 25;
-    let boxWidth = 20;
-    let outlineColor = boxColorPressed;
-    //Centers the boxes with the width of the game screen
-    let x = (width() / 2) - (((word.length * boxWidth) + ((word.length - 1) * (boxWidth / 2))) / 2);
-    let y = ((height() + boxWidth)/1.6);
-    //For each letter in word parameter, create a box to hold that letter
-    for (let i = 0; i < word.length; i++) {
-      // amount of space between boxes
-      let diff = (boxWidth + 7) * i;
-      add([
-        rect(boxWidth, boxHeight),
-        pos(x + diff, y),
-        color(boxColor),
-        outline(3, outlineColor),
-        anchor("topleft"),
-        "wordbox",
-      ]);
-      add([
-        text(word[i]),
-        pos((x + (boxWidth / 4)) + diff, y + (boxWidth / 4)),
-        anchor("topleft"),
-        scale(0.5),
-        "wordbox",
-      ]);
-    }
-  }
-  
-  function startTimer(seconds) {
-    //yellow circle behind timer
-    add([
-      pos(vec2(100,95)),
-      circle(50),
-      color(rgb(250,250,0)),
-      anchor("center"),
-    ]);
-    //Timer
-    let timer = add([
-      text(seconds.toString()),
-      pos(100, 100),
-      scale(2),
-      anchor("center"),
-      color(black),
-      { seconds: seconds },
-    ]);
-    loop(1, () => {
-      timer.seconds--;
-      timer.text = timer.seconds.toString();
-      if(timer.seconds <= 0) {
-        go("end");
-      }
-    });
-  }
-  //shuffles an entered array (Fisher-Yates Algorithm)
-  function shuffleBank(bank){
-    for(let i = bank.length - 1; i > 0; i--){
-      const r = Math.floor(Math.random() * (i + 1))
-      const temp = bank[i];
-      bank[i] = bank[r];
-      bank[r] = temp;
-    }
-  }
-
-  function pickWord(){
-    if(totalWords==0){
-      shuffleBank(wordBank);
-    }
-    if(arrayPos<wordBank.length){
-      cWord = wordBank[arrayPos];
-      if(arrayPos +1 >= wordBank.length){
-        shuffleBank(wordBank)
-        arrayPos = 0;
-      }
-      nextWord = wordBank[arrayPos +1];
-      cWordArray = cWord.split("");
-      cLetter = cWordArray[cLetNum];
-    }
-    letterBox(cWord, cLetNum, null);
-    wordPreviewBox(nextWord);
-  }
-  
   onKeyPress(()=>{
-    if(isKeyPressed(cLetter)){ //if the user presses the correct letter, go to next letter
-      cLetNum++;
-      cLetter = cWordArray[cLetNum];
-      destroyAll("wordbox");
-      letterBox(cWord, cLetNum, null);
-      wordPreviewBox(nextWord);
-      if(cWord.length == cLetNum){
-        totalWords++;
-        arrayPos++;
-        destroyAll("wordbox");
-        cLetNum = 0;
-        pickWord();
-      }
-    }else { //If the incorrect letter is pressed, turn outline red and shake screen
-      shake(30);
-      letterBox(cWord, cLetNum, true);
-      wordPreviewBox(nextWord);
-    }
+    checkLetter();
   });
 
   function startGame(){
@@ -244,11 +253,12 @@ scene("game", () => {
     nextWord = wordBank[1];
     arrayPos = 0;
     pickWord();
-    startTimer(11);
+    startTimer(31);
   }
   
   startGame();
-}); //End of Game Scene
+}); //End of tlGame Scene
+
 
 
 
@@ -316,12 +326,12 @@ scene("end", ()=>{
     againBtn1.color = boxColor;
   });
 
-  //resets score and starts game when play again button is pressed
+  //resets score and starts tlGame when play again button is pressed
   onClick("againBtn", () => {
-    go("game");
+    go("tlGame");
   });
   onKeyPress("space", () => {
-    go("game");
+    go("tlGame");
   });
 
   //BACK BUTTON
@@ -333,7 +343,6 @@ scene("end", ()=>{
     "backBtn",
   ]);
   onClick("backBtn", () => {
-    totalWords = 0;
     go("mainmenu");
   });
   
@@ -341,7 +350,16 @@ scene("end", ()=>{
   
 });//End of End Scene
 
+
+
+
+
+
+
+
 scene("mainmenu", ()=>{
+  let boxHeight = 230;
+  let boxWidth = 500;
   const background = add([
     sprite("background"),
     pos(width() / 2, height() / 2),
@@ -351,15 +369,31 @@ scene("mainmenu", ()=>{
     "background",
   ]);
   add([
+    pos(vec2(width()/2, (height()/1.5))),
+    rect(boxWidth + 10,boxHeight + 10),
+    color(white),
+    anchor("center"),
+    area(),
+  ]);
+  add([
+    pos(vec2(width()/2, (height()/1.5))),
+    rect(boxWidth,boxHeight),
+    color(boxColor),
+    anchor("center"),
+    area(),
+  ]);
+  add([
     text("PRESS SPACE TO START"),
     pos(width()/2, height()/1.5),
     anchor("center"),
   ]);
   onKeyPress("space", () => {
-    go("game");
+    go("tlGame");
   });
   onClick(()=> {
-    go("game");
+    go("tlGame");
   });
 });
+
+//WHEN WINDOW RUNS
 go("mainmenu");
