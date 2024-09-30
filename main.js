@@ -67,7 +67,7 @@ var wordBank = [
   "oven",
   "furnace",
   "neapolitan",
-  "NewYork",
+  "nyc",
   "sicillian",
   "char",
   "deep",
